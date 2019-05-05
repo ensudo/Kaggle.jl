@@ -36,7 +36,7 @@ distributions.Normal(statsbase.mean(x), statsbase.std(x))
 gendersubmission = csv.File("./resource/gender_submission.csv") |> csv.DataFrame
 train = csv.File("./resource/train.csv") |> csv.DataFrame
 test = csv.File("./resource/test.csv") |> csv.DataFrame
-menache = csv.File("/Users/greade01/Data/menarche.csv") |> dataframes.DataFrame
+menache = csv.File("~/Data/menarche.csv") |> dataframes.DataFrame
 
 menache[:Total] = convert(Array{Int, 1}, menache[:Total])
 xGrid = 0:0.1:maximum(menache[:Age])

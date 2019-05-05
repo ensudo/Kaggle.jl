@@ -226,4 +226,3 @@ mlogreg = GLM.glm(
     GLM.Binomial(),
     GLM.LogitLink()
 )
-

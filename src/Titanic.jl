@@ -4,15 +4,31 @@ import GLM
 import CSV
 import MLLabelUtils
 import DataFrames
-import Statistics
 import StatsPlots
 import Knet
 import StatsBase
 import Distributions
 import DataFramesMeta
+import MultivariateStats
+import Statistics
 import Missings
 
-StatsPlots.pyplot()
+const flux              = Flux
+const tracker           = Flux.Tracker
+const calculus          = Calculus
+const glm               = GLM
+const csv               = CSV
+const statsplots        = StatsPlots
+const multivariatestats = MultivariateStats
+const mllabelutils      = MLLabelUtils
+const dataframes        = DataFrames
+const statistics        = Statistics
+const distributions     = GLM.Distributions
+const knet              = Knet
+const statsbase         = StatsBase
+const missings          = Missings
+
+statsplots.pyplot(width = 100)
 
 ∑ = +
 
@@ -41,20 +57,20 @@ Support Vector Machines
 # TODO analysis on what predictors are most relevent to predicting the response variable
 # TODO Research how to count missing values
 
-train = CSV.File("./resource/train.csv") |> CSV.DataFrame
+train = CSV.File("./resource/train.csv") |> dataframes.DataFrame
 
 function titles(xs::Array{Union{Missing, String}, 1})
     acc::Array{String, 1} = []
     for x in xs
-        if occursin("Mr.", x) 
+        if occursin("Mr.", x)
             push!(acc, "Mr")
-        elseif occursin("Mrs.", x) 
+        elseif occursin("Mrs.", x)
             push!(acc, "Mrs")
         elseif occursin("Miss.", x)
             push!(acc, "Miss")
-        elseif occursin("Master.", x) 
+        elseif occursin("Master.", x)
             push!(acc, "Master")
-        elseif occursin("Rev.", x) 
+        elseif occursin("Rev.", x)
             push!(acc, "Rev")
         else push!(acc, "Unknown")
         end
@@ -63,7 +79,7 @@ function titles(xs::Array{Union{Missing, String}, 1})
 end
 
 function encodinglabels(features::Array{String, 1})
-    Symbol.(MLLabelUtils.labelenc(features) |> MLLabelUtils.label)
+    Symbol.(mllabelutils.labelenc(features) |> mllabelutils.label)
 end
 ########################
 ## Feature Extraction ##
@@ -71,158 +87,172 @@ end
 
 # Data Transformation #
 
-meanage = train[:Age] |> skipmissing |> StatsBase.mean |> round # Mean Age
+meanage = train[:Age] |> skipmissing |> statistics.mean |> round # Mean Age
 train[:Age] = Missings.replace(train[:Age], meanage) |> collect # Replace missing with mean Age
 
-meanfare = train[:Fare] |> skipmissing |> StatsBase.mean |> round # Mean Fare
+meanfare = train[:Fare] |> skipmissing |> statistics.mean |> round # Mean Fare
 train[:Fare] = Missings.replace(train[:Fare], meanfare) |> collect # Replace missing with mean Fare
 
-modeembarked = train.Embarked |> skipmissing |> StatsBase.mode # Mode Embarked
+modeembarked = train.Embarked |> skipmissing |> statsbase.mode # Mode Embarked
 train.Embarked = Missings.replace(train.Embarked, modeembarked) |> collect # Replace missing Embarked with mode
 
-train[:Fare] = StatsBase.zscore(train[:Fare]) # Scale Fare for outliers 
-train[:Age] = StatsBase.zscore(train[:Age]) # Scale Age for outliers
+train[:Fare] = glm.zscore(train[:Fare]) # Scale Fare for outliers
+train[:Age] = glm.zscore(train[:Age]) # Scale Age for outliers
 
 train[:Title] = titles(train[:Name]) # Create new column Title with titles extracted from Name
 
-train[:Sex] = MLLabelUtils.convertlabel([1, -1], train[:Sex]) # 1 = male, -1 = female
+train[:Sex] = mllabelutils.convertlabel([1, -1], train[:Sex]) # 1 = male, -1 = female
 
-titleonehot = MLLabelUtils.convertlabel(
-    MLLabelUtils.LabelEnc.OneOfK,train[:Title]
-) |> transpose # One-hot encode + reshape matrix to allow being converted to data frame
-
-embarkedonehot = MLLabelUtils.convertlabel(
-    MLLabelUtils.LabelEnc.OneOfK, 
+embarkedonehot = mllabelutils.convertlabel(
+    mllabelutils.LabelEnc.OneOfK,
     train.Embarked
 ) |> transpose
 
-embarkedf = DataFrames.names!(
-    DataFrames.DataFrame(embarkedonehot), 
+embarkedf = dataframes.names!(
+    dataframes.DataFrame(embarkedonehot),
     encodinglabels(train.Embarked)
 )
 
-titlesdf = DataFrames.names!(
-    DataFrames.DataFrame(titleonehot), 
+titleonehot = mllabelutils.convertlabel(
+    mllabelutils.LabelEnc.OneOfK,train[:Title]
+) |> transpose # One-hot encode + reshape matrix to allow being converted to data frame
+
+titlesdf = dataframes.names!(
+    dataframes.DataFrame(titleonehot),
+    encodinglabels(train.Title)
+)
+
+titlesdf = dataframes.names!(
+    dataframes.DataFrame(titleonehot),
     encodinglabels(train.Title)
 )
 
 train = hcat(train, titlesdf, embarkedf) # Concatenate one-hot encoded titles to training DataFrame
-DataFrames.deletecols!(train, :Name)   # Remove name as we dont need it
-DataFrames.deletecols!(train, :Cabin)  # Remove cabin as it has a high number of missing values
-DataFrames.deletecols!(train, :Ticket) # Remove ticket as not enough is known about it
-
-train[[:S, :C, :Q, :Embarked]]
+dataframes.deletecols!(train, :Name)   # Remove name as we dont need it
+dataframes.deletecols!(train, :Cabin)  # Remove cabin as it has a high number of missing values
+dataframes.deletecols!(train, :Ticket) # Remove ticket as not enough is known about it
 
 ########################
 ## Exploration        ##
 ########################
 
-
 # TODO Go through slides on dimensionality reduction (feature selection)
-logreg = GLM.glm(
-    GLM.@formula(
-        Survived ~ Pclass + Fare + Age + Sex + Mr + Mrs + Miss + Master + Rev + S
-    ),
-    train, 
-    GLM.Binomial(),
-    GLM.LogitLink()
+
+
+# Remove any high;y correlated variables
+
+#vDrvp highly correlated features from the model
+
+corrdf = train[
+    [
+        :Survived,
+        :Pclass,
+        :Sex,
+        :Age,
+        :SibSp,
+        :Parch,
+        :Fare,
+        :Mr,
+        :Mrs,
+        :Miss,
+        :Master,
+        :Unknown,
+        :Rev,
+        :S,
+        :C,
+        :Q
+    ]
+]
+
+#=
+Can you correlate categorical variables?
+Without order, it's not possible to correlate two variables. But never fear, there
+are ways to find out if categorical variables are related in some way; you need to
+simply move from correlation to association. These would be tests such
+as Chi square and ANOVAs.
+=#
+
+statsplots.crosscor(train.S, train.C)
+
+cormat = convert(
+    Array{Float64, 2},
+    corrdf
+) |> distributions.cor
+
+statsplots.corrplot(cormat, size = (2000, 1500), label = names(corrdf))
+
+statsplots.@df corrdf statsplots.boxplot(
+    [:Rev :S :C :Q],
+    size = (2000, 1500),
 )
 
-DataFrames.head(train)
-DataFrames.size(train) # shape
-DataFrames.describe(train)
+# TODO read slides on dimensiality redection
+
+#=
+Rev+S+C+Q <- TODO find whats up with these.. PCA will fix this but first look
+into finding out which variables are the culprits of failing colinearality when model is fit
+=#
+logreg = glm.glm(
+    glm.@formula(
+        Survived ~ Pclass+Sex+Age+SibSp+Parch+Fare+Mr+Mrs+Miss+Master+Unknown
+    ),
+    corrdf,
+    glm.Binomial(),
+    glm.LogitLink()
+)
+
+
+dataframes.head(train)
+size(train) # shape
+dataframes.describe(train)
 
 ## Outliers
-StatsPlots.boxplot(hcat(train[:Fare], train[:Age]))
+statsplots.boxplot(hcat(train[:Fare], train[:Age]))
 # Mean and standard deviation
-faremean = StatsBase.mean(train.Fare)
-farestd = StatsBase.std(train.Fare)
+faremean = statistics.mean(train.Fare)
+farestd = statistics.std(train.Fare)
 
 # Look how data is distributed
-faredist = Distributions.fit(Distributions.Normal, train[:Fare])
-agedist = Distributions.fit(Distributions.Normal, train[:Age])
+faredist = glm.fit(distributions.Normal, train[:Fare])
+agedist = glm.fit(distributions.Normal, train[:Age])
 
-StatsPlots.plot(
-    Distributions.Normal(0, 1),
+statsplots.plot(
+    distributions.Normal(0, 1),
     title = "Age"
 ) # Start with normal distribution
-StatsPlots.density!(train[:Age]) # Overlay Age distribution
-Distributions.skewness(train.Age)
+statsplots.density!(train[:Age]) # Overlay Age distribution
+distributions.skewness(train.Age)
 
-StatsPlots.plot(
-    Distributions.Normal(0, 1),
+statsplots.plot(
+    distributions.Normal(0, 1),
     title = "Fare"
 ) # Start with normal distribution
-StatsPlots.density!(train[:Fare]) # Overlay Fare distribution
-Distributions.skewness(train.Fare)
+statsplots.density!(train[:Fare]) # Overlay Fare distribution
+distributions.skewness(train.Fare)
 
 train[[:Title, :Sex, :Mr, :Mrs, :Miss, :Master, :Unknown, :Rev]]
 
-StatsPlots.plot(
- StatsPlots.qqplot(
-     train[:Fare], 
-     train[:Age], 
+statsplots.plot(
+    statsplots.qqplot(
+     train[:Fare],
+     train[:Age],
      qqline = :fit,
      title = "Fare/Age"
     ), # qqplot of two samples, show a fitted regression line
 )
 
-StatsPlots.plot(
- StatsPlots.qqplot(
-    Distributions.Normal(0,1),
+statsplots.plot(
+    statsplots.qqplot(
+    distributions.Normal(0,1),
      train[:Fare],
      title = "Fare/Normal"
     ), # qqplot of two samples, show a fitted regression line
 )
 
-StatsPlots.plot(
- StatsPlots.qqplot(
-    Distributions.Normal(0,1),
+statsplots.plot(
+    statsplots.qqplot(
+    distributions.Normal(0,1),
      train[:Age],
      title = "Age/Normal"
     ), # qqplot of two samples, show a fitted regression line
-)
-
-#=2
-Shows difference in people who paid more survived vs people who paid less
-tended to not survive. 
-=#
-
-StatsPlots.boxplot(train.Survived, train.Fare)
-StatsPlots.bar(train.Survived, train.Fare)
-
-train = train[[:Survived, :Pclass, :Sex, :Age, :SibSp, :Parch, :Fare]]
-train = DataFrames.dropmissing(train, :Age)
-
-DataFrames.describe(train)
-train.Sex = MLLabelUtils.convertlabel([0, 1], train.Sex) # zero = male, female = 1
-
-logreg = GLM.glm(
-    GLM.@formula(Survived ~ Pclass),
-    train, 
-    GLM.Binomial(),
-    GLM.LogitLink()
-)
-#=
-Make predictions: Use the intercept (first coeefficienct) 
-with the second coefficient (for Pclass)
-=#
-firstclass, secondclass, thirdclass = 1, 2, 3
-Flux.sigmoid(GLM.coef(logreg)[1] + GLM.coef(logreg)[2] * firstclass)
-Flux.sigmoid(GLM.coef(logreg)[1] + GLM.coef(logreg)[2] * secondclass)
-Flux.sigmoid(GLM.coef(logreg)[1] + GLM.coef(logreg)[2] * thirdclass)
-GLM.predict(logreg, DataFrames.DataFrame(Survived = [1], Pclass = [3]))
-GLM.predict(logreg)
-
-pred(x) = 1/(1+exp(-(GLM.coef(logreg)[1] + GLM.coef(logreg)[2]*x)))
-
-xGrid = 0:0.1:maximum(train[:Pclass])
-
-StatsPlots.plot(xGrid, pred.(xGrid))
-
-mlogreg = GLM.glm(
-    GLM.@formula(Survived ~ Pclass + Sex + Age + Parch + Fare), 
-    train, 
-    GLM.Binomial(),
-    GLM.LogitLink()
 )

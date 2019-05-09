@@ -95,7 +95,7 @@ statsplots.bar(train.Survived, train.Fare)
 train = train[[:Survived, :Pclass, :Sex, :Age, :SibSp, :Parch, :Fare]]
 train = dataframes.dropmissing(train, :Age)
 
-dataframes.describe(train)
+dat1aframes.describe(train)
 train.Sex = mllabelutils.convertlabel([0, 1], train.Sex) # zero = male, female = 1
 
 # TODO analysis on what predictors are most relevent to predicting the response variable
@@ -202,3 +202,52 @@ g = Base.Fix1((x, y) -> x + y, 1)
 occursin("m", skipmissing(["m", missing]))
 
 skipmissing(missing) |> collect
+
+round.([0.231]; digits = 2)
+
+StatsBase.crosscor(train.S, train.C)
+
+
+#=2
+Shows difference in people who paid more survived vs people who paid less
+tended to not survive. 
+=#
+
+statsplots.boxplot(train.Survived, train.Fare)
+statsplots.bar(train.Survived, train.Fare)
+
+train = train[[:Survived, :Pclass, :Sex, :Age, :SibSp, :Parch, :Fare]]
+train = dataframes.dropmissing(train, :Age)
+
+dataframes.describe(train)
+train.Sex = mllabelutils.convertlabel([0, 1], train.Sex) # zero = male, female = 1
+
+logreg = glm.glm(
+    glm.@formula(Survived ~ Pclass),
+    train, 
+    glm.Binomial(),
+    glm.LogitLink()
+)
+#=
+Make predictions: Use the intercept (first coeefficienct) 
+with the second coefficient (for Pclass)
+=#
+firstclass, secondclass, thirdclass = 1, 2, 3
+flux.sigmoid(coef(logreg)[1] + coef(logreg)[2] * firstclass)
+flux.sigmoid(coef(logreg)[1] + coef(logreg)[2] * secondclass)
+flux.sigmoid(coef(logreg)[1] + coef(logreg)[2] * thirdclass)
+flux.predict(logreg, DataFrame(Survived = [1], Pclass = [3]))
+glm.predict(logreg)
+
+pred(x) = 1/(1+exp(-(coef(logreg)[1] + coef(logreg)[2]*x)))
+
+xGrid = 0:0.1:maximum(train[:Pclass])
+
+plot(xGrid, pred.(xGrid))
+
+mlogreg = glm(
+    @formula(Survived ~ Pclass + Sex + Age + Parch + Fare), 
+    train, 
+    Binomial(),
+    LogitLink()
+)

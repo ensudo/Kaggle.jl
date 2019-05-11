@@ -1,4 +1,3 @@
-
 survivedcount = count(x -> x == 1,  train.Survived)
 diedcount = count(x -> x == 0,  train.Survived)
 
@@ -16,8 +15,8 @@ mllabelutils.convertlabel(["Died", "Survived"], train.Survived)
 #=
 Why no fstatistic?
 
-GeneralizedLinearModels do support an analysis of deviance, which is similar in 
-spirit to analysis of variance but, I believe, is equivalent to 
+GeneralizedLinearModels do support an analysis of deviance, which is similar in
+spirit to analysis of variance but, I believe, is equivalent to
 a likelihood ratio test
 =#
 
@@ -85,7 +84,7 @@ train[:Fare] = statsbase.zscore(train.Fare)
 statsplots.plot(statsplots.plot_function(glm.logistic, train.Survived))
 #=2
 Shows difference in people who paid more survived vs people who paid less
-tended to not survive. 
+tended to not survive.
 =#
 
 #People who paid more were more likely to survive
@@ -101,14 +100,14 @@ train.Sex = mllabelutils.convertlabel([0, 1], train.Sex) # zero = male, female =
 # TODO analysis on what predictors are most relevent to predicting the response variable
 logreg = glm.glm(
     glm.@formula(Survived ~ Pclass),
-    train, 
+    train,
     glm.Binomial(),
     glm.LogitLink()
 )
 
 logreg = glm.glm(
     glm.@formula(Survived ~ Fare),
-    train, 
+    train,
     glm.Binomial(),
     glm.LogitLink()
 )
@@ -126,7 +125,7 @@ dataframes.DataFrame(
 hcat([1, 2], [3, 4])
 
 #=
-Make predictions: Use the intercept (first coeefficienct) 
+Make predictions: Use the intercept (first coeefficienct)
 with the second coefficient (for Pclass)
 =#
 firstclass, secondclass, thirdclass = 1, 2, 3
@@ -143,8 +142,8 @@ xGrid = 0:0.1:maximum(train[:Pclass])
 statsplots.plot(xGrid, pred.(xGrid))
 
 mlogreg = glm.glm(
-    glm.@formula(Survived ~ Pclass + Sex + Age + Parch + Fare), 
-    train, 
+    glm.@formula(Survived ~ Pclass + Sex + Age + Parch + Fare),
+    train,
     glm.Binomial(),
     glm.LogitLink()
 )
@@ -211,7 +210,7 @@ StatsBase.crosscor(train.S, train.C)
 
 #=2
 Shows difference in people who paid more survived vs people who paid less
-tended to not survive. 
+tended to not survive.
 =#
 
 statsplots.boxplot(train.Survived, train.Fare)
@@ -225,12 +224,12 @@ train.Sex = mllabelutils.convertlabel([0, 1], train.Sex) # zero = male, female =
 
 logreg = glm.glm(
     glm.@formula(Survived ~ Pclass),
-    train, 
+    train,
     glm.Binomial(),
     glm.LogitLink()
 )
 #=
-Make predictions: Use the intercept (first coeefficienct) 
+Make predictions: Use the intercept (first coeefficienct)
 with the second coefficient (for Pclass)
 =#
 firstclass, secondclass, thirdclass = 1, 2, 3
@@ -247,8 +246,253 @@ xGrid = 0:0.1:maximum(train[:Pclass])
 plot(xGrid, pred.(xGrid))
 
 mlogreg = glm(
-    @formula(Survived ~ Pclass + Sex + Age + Parch + Fare), 
-    train, 
+    @formula(Survived ~ Pclass + Sex + Age + Parch + Fare),
+    train,
     Binomial(),
     LogitLink()
 )
+
+dataframes.head(train)
+size(train) # shape
+dataframes.describe(train)
+
+## Outliers
+statsplots.boxplot(hcat(train[:Fare], train[:Age]))
+# Mean and standard deviation
+faremean = statistics.mean(train.Fare)
+farestd = statistics.std(train.Fare)
+
+# Look how data is distributed
+faredist = glm.fit(distributions.Normal, train[:Fare])
+agedist = glm.fit(distributions.Normal, train[:Age])
+
+statsplots.plot(
+    distributions.Normal(0, 1),
+    title = "Age"
+) # Start with normal distribution
+statsplots.density!(train[:Age]) # Overlay Age distribution
+distributions.skewness(train.Age)
+
+statsplots.plot(
+    distributions.Normal(0, 1),
+    title = "Fare"
+) # Start with normal distribution
+statsplots.density!(train[:Fare]) # Overlay Fare distribution
+distributions.skewness(train.Fare)
+
+train[[:Title, :Sex, :Mr, :Mrs, :Miss, :Master, :Unknown, :Rev]]
+
+statsplots.plot(
+    statsplots.qqplot(
+     train[:Fare],
+     train[:Age],
+     qqline = :fit,
+     title = "Fare/Age"
+    ), # qqplot of two samples, show a fitted regression line
+)
+
+statsplots.plot(
+    statsplots.qqplot(
+    distributions.Normal(0,1),
+     train[:Fare],
+     title = "Fare/Normal"
+    ), # qqplot of two samples, show a fitted regression line
+)
+
+statsplots.plot(
+    statsplots.qqplot(
+    distributions.Normal(0,1),
+     train[:Age],
+     title = "Age/Normal"
+    ), # qqplot of two samples, show a fitted regression line
+)
+statsplots.histogram(randn(100), normed=true)
+
+###############################################################################################
+
+
+#=
+
+Classification Models
+---------------------
+
+Logistic Regression
+Multiple Logistic Regression
+Probit regression
+OLS regression
+Two-group discriminant function analysis
+Hotelling’s T2
+Linear Discriminant Analysis
+K-nearest neighbours
+Generalized Additive Models
+Trees
+Random Forest
+Boosting
+Support Vector Machines
+
+=#
+
+# TODO read!! http://ww2.coastal.edu/kingw/statistics/R-tutorials/logistic.html
+# TODO analysis on what predictors are most relevent to predicting the response variable
+# TODO Research how to count missing values
+
+train = CSV.File("../resource/train.csv") |> dataframes.DataFrame
+
+function titles(xs::Array{Union{Missing, String}, 1})
+    acc::Array{String, 1} = []
+    for x in xs
+        if occursin("Mr.", x)
+            push!(acc, "Mr")
+        elseif occursin("Mrs.", x)
+            push!(acc, "Mrs")
+        elseif occursin("Miss.", x)
+            push!(acc, "Miss")
+        elseif occursin("Master.", x)
+            push!(acc, "Master")
+        elseif occursin("Rev.", x)
+            push!(acc, "Rev")
+        else push!(acc, "Unknown")
+        end
+    end
+    acc
+end
+
+function encodinglabels(features::Array{String, 1})
+    Symbol.(mllabelutils.labelenc(features) |> mllabelutils.label)
+end
+########################
+## Feature Extraction ##
+########################
+
+# Data Transformation #
+
+meanage = train[:Age] |> skipmissing |> statistics.mean |> round # Mean Age
+train[:Age] = Missings.replace(train[:Age], meanage) |> collect # Replace missing with mean Age
+
+meanfare = train[:Fare] |> skipmissing |> statistics.mean |> round # Mean Fare
+train[:Fare] = Missings.replace(train[:Fare], meanfare) |> collect # Replace missing with mean Fare
+
+modeembarked = train.Embarked |> skipmissing |> statsbase.mode # Mode Embarked
+train.Embarked = Missings.replace(train.Embarked, modeembarked) |> collect # Replace missing Embarked with mode
+
+train[:Fare] = glm.zscore(train[:Fare]) # Scale Fare for outliers
+train[:Age] = glm.zscore(train[:Age]) # Scale Age for outliers
+
+train[:Title] = titles(train[:Name]) # Create new column Title with titles extracted from Name
+
+train[:Sex] = mllabelutils.convertlabel([1, -1], train[:Sex]) # 1 = male, -1 = female
+
+embarkedonehot = mllabelutils.convertlabel(
+    mllabelutils.LabelEnc.OneOfK,
+    train.Embarked
+) |> transpose
+
+embarkedf = dataframes.names!(
+    dataframes.DataFrame(embarkedonehot),
+    encodinglabels(train.Embarked)
+)
+
+titleonehot = mllabelutils.convertlabel(
+    mllabelutils.LabelEnc.OneOfK,train[:Title]
+) |> transpose # One-hot encode + reshape matrix to allow being converted to data frame
+
+titlesdf = dataframes.names!(
+    dataframes.DataFrame(titleonehot),
+    encodinglabels(train.Title)
+)
+
+titlesdf = dataframes.names!(
+    dataframes.DataFrame(titleonehot),
+    encodinglabels(train.Title)
+)
+
+train = hcat(train, titlesdf, embarkedf) # Concatenate one-hot encoded titles to training DataFrame
+dataframes.deletecols!(train, :Name)   # Remove name as we dont need it
+dataframes.deletecols!(train, :Cabin)  # Remove cabin as it has a high number of missing values
+dataframes.deletecols!(train, :Ticket) # Remove ticket as not enough is known about it
+
+########################
+## Exploration        ##
+########################
+
+# TODO Go through slides on dimensionality reduction (feature selection)
+
+
+# Remove any high;y correlated variables
+
+#vDrvp highly correlated features from the model
+
+corrdf = train[
+    [
+        :Survived,
+        :Pclass,
+        :Sex,
+        :Age,
+        :SibSp,
+        :Parch,
+        :Fare,
+        :Mr,
+        :Mrs,
+        :Miss,
+        :Master,
+        :Unknown,
+        :Rev,
+        :S,
+        :C,
+        :Q
+    ]
+]
+
+#=
+Can you correlate categorical variables?
+Without order, it's not possible to correlate two variables. But never fear, there
+are ways to find out if categorical variables are related in some way; you need to
+simply move from correlation to association. These would be tests such
+as Chi square and ANOVAs.
+=#
+
+statsplots.crosscor(train.S, train.C)
+
+cormat = convert(
+    Array{Float64, 2},
+    corrdf
+) |> distributions.cor
+
+statsplots.corrplot(cormat, label = names(corrdf))
+
+statsplots.@df corrdf statsplots.boxplot(
+    [:Rev :S :C :Q],
+    size = (2000, 1500),
+)
+
+# TODO read slides on dimensiality redection
+
+#=
+Rev+S+C+Q <- TODO find whats up with these.. PCA will fix this but first look
+into finding out which variables are the culprits of failing colinearality when model is fit
+=#
+logreg = glm.glm(
+    glm.@formula(
+        Survived ~ Pclass+Age+SibSp+Parch+Fare+Sex
+    ),
+    corrdf,
+    glm.Binomial(),
+    glm.LogitLink()
+)
+statsplots.plot(
+    statsplots.qqplot(
+     train[:Fare],
+     train[:Age],
+     qqline = :fit,
+     title = "Fare/Age"
+    ), # qqplot of two samples, show a fitted regression line
+)
+
+glm.deviance(logreg)
+statsplots.scatter(glm.predict(logreg, train[[:Pclass, :Age, :Sex, :SibSp, :Parch, :Fare]]))
+
+statsplots.scatter([0, 1, 1, 0, 0, 0, 1])
+
+statsplots.histogram(randn(100), normed=true)
+
+onehotbatch(train.Sex, label(train.Sex))

@@ -67,7 +67,7 @@ score = accuracy(xtest, ytest)
 
 function confusionmatrix(X, y)
     ŷ = onehotbatch(onecold(model(X)), 1:3)
-    y * ŷ'
+    y * ŷ
 end
 
 cmat = confusionmatrix(xtest, ytest)

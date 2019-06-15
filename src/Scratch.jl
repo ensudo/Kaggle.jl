@@ -1,3 +1,10 @@
+import StatsPlots: plot, plotlyjs, plot_function
+
+plotlyjs()
+
+plot(plot_function(x -> x * x, [1, 2, 3, 4, 5]))
+
+
 survivedcount = count(x -> x == 1,  train.Survived)
 diedcount = count(x -> x == 0,  train.Survived)
 
@@ -556,4 +563,34 @@ cmat = confusionmatrix(xtest, ytest)
 display(cmat)
 
 
+
+survived = File("../resource/titanic/gender_submission.csv") |> DataFrame
+
+train = File("../resource/titanic/train.csv") |> DataFrame
+test = File("../resource/titanic/test.csv") |> DataFrame
+
+test = hcat(test, survived.Survived)
+
+rename!(test, :x1, :Survived)
+
+describe(test)
+
+test[:Survived]
+
+test = test[[:PassengerId, :Survived, :Pclass, :Name, :Sex, :Age, :SibSp, :Parch]]
+
+out = vcat(test, train)
+
+write("/Users/greade01/data.csv", out, delim=",")
+
+train = File("../resource/titanic/train.csv") |> DataFrame
+test = File("../resource/titanic/test.csv") |> DataFrame
+sur = File("../resource/titanic/gender_submission.csv") |> DataFrame
+
+test = hcat(sur[:Survived], test)
+rename!(test, :x1, :Survived)
+
+data = vcat(train, test)
+describe(data)
+write("/Users/greade01/data.csv", data)
 

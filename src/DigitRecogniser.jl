@@ -14,17 +14,20 @@ plotlyjs()
 parseint = Fix1(parse, Int)
 
 GreyImage = Array{ColorTypes.Gray{FixedPointNumbers.Normed{UInt8,8}}, 2}
+MiniBatchIndexes = PartitionIterator{UnitRange{Int64}}
 Label = Int64
-
+BatchSize = Int64
+Labels = Array{Label, 1}
+Images = Array{GreyImage, 1}
 struct ImageFeatures
-    labels::Array{Label, 1}
-    images::Array{GreyImage, 1}
+    labels::Labels
+    images::Images
 end
 
 struct MiniBatch
-    imagefeatures::ImageFeatures
-    indexes::PartitionIterator{UnitRange{Int64}}
-    batchsize::Int64
+    features::ImageFeatures
+    indexes::MiniBatchIndexes
+    size::BatchSize
 end
 
 function loadimages(path::String)::ImageFeatures

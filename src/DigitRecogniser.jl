@@ -19,6 +19,7 @@ Label = Int64
 BatchSize = Int64
 Labels = Array{Label, 1}
 Images = Array{GreyImage, 1}
+
 struct ImageFeatures
     labels::Labels
     images::Images
@@ -26,7 +27,6 @@ end
 
 struct MiniBatch
     features::ImageFeatures
-    indexes::MiniBatchIndexes
     size::BatchSize
 end
 
@@ -45,16 +45,27 @@ function loadimages(path::String)::ImageFeatures
     ImageFeatures(labels, images)
 end
 
-greyimages = loadimages("resource/digitrecogniser/data")
+features = loadimages("../resource/digitrecogniser/data")
 
 function minibatch(batch::MiniBatch)
-    xbatch = Array{Float32}(undef, size(batch.imagefeatures.labels[1])..., 1, length(batch.indexes))
+    indexes = partition(1:length(batch.features.images), batch.size)
+    indexeslength = 1:length(indexes)
+    xbatch = Array{Float32}(
+        undef,
+        size(batch.features.images[1])...,
+        1,
+        indexeslength
+    )
+    for index in indexeslength
+        xbatch[:, :, :, index] = Float32.(batch.features.images[indexes[index]])
+    end
     return xbatch
 end
 
+batch = MiniBatch(features, 128)
 
 
-minibatch(greyimages)
+minibatch(batch)
 
 a2 = ((1, 2), (3, 4), (5, 6))
 a3 = zip([1, 2, 3], [4, 5, 6])
@@ -69,10 +80,9 @@ batchview(data)
 
 train_labels = MNIST.labels()
 train_imgs = MNIST.images()
-
+train_imgs[1]
 # Bundle images together with labels and group into minibatchess
 function make_minibatch(X, Y, idxs)
-    println(typeof(idxs))
     X_batch = Array{Float32}(undef, size(X[1])..., 1, length(idxs))
     for i in 1:length(idxs)
         X_batch[:, :, :, i] = Float32.(X[idxs[i]])

@@ -16,6 +16,7 @@ import MLDataUtils: splitobs, shuffleobs
 import RDatasets: dataset
 import LinearAlgebra
 
+
 #[:, start:stride:end]
 
 #=
@@ -41,7 +42,7 @@ TODO Try get above .9 by adding more layers
 
 plotlyjs()
 
-data = File("../resource/titanic/data.csv") |> DataFrame
+data = File("resource/titanic/data.csv") |> DataFrame
 
 # data = shuffleobs(data)
 data.Sex = convert(Array{String, 1}, data.Sex)

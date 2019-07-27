@@ -1,5 +1,9 @@
 import StatsPlots: plot, plotlyjs, plot_function
 
+####################################################################################################
+# TITANIC
+###################################################################################################
+
 plotlyjs()
 
 plot(plot_function(x -> x * x, [1, 2, 3, 4, 5]))
@@ -594,3 +598,30 @@ data = vcat(train, test)
 describe(data)
 write("/Users/greade01/data.csv", data)
 
+#################################################################################################
+# DIGIT RECOGNISER
+#################################################################################################
+
+function renamefiles(path::String)
+    filenames = readdir(path)
+    for (index, filename) in enumerate(filenames)
+        fpsource = string(path, filename)
+        fpdestination = string(path, index, ".jpg")
+        mv(fpsource, fpdestination)
+    end
+end
+
+function loadimages(path::String)::Array{Tuple{Label, GreyImage}}
+    images::Array{GreyImage, 1} = []
+    labels::Array{Label, 1} = []
+    nothidden = file -> !startswith(file, ".")
+    files = filter(nothidden, readdir(path))
+    for file in files
+        imagepath = string(path, "/", file)
+        image = load(imagepath)
+        label = split(file, ".") |> first |> last |> parseint
+        push!(labels, label)
+        push!(images, image)
+    end
+    zip(labels, images) |> collect
+end

@@ -41,7 +41,7 @@ end
 
 features = loadimages("../resource/digitrecogniser/data")
 
-function minibatch(images::Images, batchindex::MiniBatchIndex)::MiniBatchedImages
+function minibatch(batchindex::MiniBatchIndex, images::Images)::MiniBatchedImages
     batch = Array{Float32}(
         undef,
         size(images[1])...,
@@ -54,13 +54,13 @@ function minibatch(images::Images, batchindex::MiniBatchIndex)::MiniBatchedImage
     batch
 end
 
-function minibatch(labels::Labels, batchindex::MiniBatchIndex)::MiniBatchedLabels
+function minibatch(batchindex::MiniBatchIndex, labels::Labels)::MiniBatchedLabels
     batch = onehotbatch(labels[batchindex], 0:9)
     batch
 end
 
 indexes = partition(1:length(features.images), 128)
-trainimages = [minibatch(features.images, index) for index in indexes]
-trainlabels = [minibatch(features.labels, index) for index in indexes]
+trainimages = [minibatch(index, features.images) for index in indexes]
+trainlabels = [minibatch(index, features.labels) for index in indexes]
 
 @assert score > 0.8

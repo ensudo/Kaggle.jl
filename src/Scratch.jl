@@ -625,3 +625,18 @@ function loadimages(path::String)::Array{Tuple{Label, GreyImage}}
     end
     zip(labels, images) |> collect
 end
+
+function minibatch(batch::MiniBatch)
+    indexes = partition(1:length(batch.features.images), batch.size)
+    indexeslength = 1:length(indexes)
+    xbatch = Array{Float32}(
+        undef,
+        size(batch.features.images[1])...,
+        1,
+        indexeslength
+    )
+    for index in indexeslength
+        xbatch[:, :, :, index] = Float32.(batch.features.images[indexes[index]])
+    end
+    return xbatch
+end

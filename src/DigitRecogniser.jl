@@ -14,7 +14,8 @@ plotlyjs()
 parseint = Fix1(parse, Int)
 
 GreyImage = Array{ColorTypes.Gray{FixedPointNumbers.Normed{UInt8,8}}, 2}
-MiniBatchIndexes = PartitionIterator{UnitRange{Int64}}
+MiniBatchIndex = UnitRange{Int64}
+MiniBatchIndexes = PartitionIterator{MiniBatchIndex}
 Label = Int64
 BatchSize = Int64
 Labels = Array{Label, 1}
@@ -23,11 +24,6 @@ Images = Array{GreyImage, 1}
 struct ImageFeatures
     labels::Labels
     images::Images
-end
-
-struct MiniBatch
-    features::ImageFeatures
-    size::BatchSize
 end
 
 function loadimages(path::String)::ImageFeatures
@@ -47,25 +43,30 @@ end
 
 features = loadimages("../resource/digitrecogniser/data")
 
-function minibatch(batch::MiniBatch)
-    indexes = partition(1:length(batch.features.images), batch.size)
-    indexeslength = 1:length(indexes)
-    xbatch = Array{Float32}(
+function minibatch(images::Images, batchindex::MiniBatchIndex)
+    batch = Array{Float32}(
         undef,
-        size(batch.features.images[1])...,
+        size(images[1])...,
         1,
-        indexeslength
+        length(batchindex)
     )
-    for index in indexeslength
-        xbatch[:, :, :, index] = Float32.(batch.features.images[indexes[index]])
+    for index in 1:length(batchindex)
+        batch[:, :, :, index] = Float32.(images[batchindex[index]])
     end
-    return xbatch
+    return batch
 end
 
-batch = MiniBatch(features, 128)
+function minibatch(labels::Labels, batchindex::MiniBatchIndex)
+    batch = onehotbatch(labels[batchindex], 0:9)
+    batch
+end
 
+indexes = partition(1:length(features.images), 128 )
 
-minibatch(batch)
+trainimages = [minibatch(features.images, index) for index in indexes]
+trainlabels = [minibatch(features.labels, index) for index in indexes]
+
+# TODO investigate multiple dispatch
 
 a2 = ((1, 2), (3, 4), (5, 6))
 a3 = zip([1, 2, 3], [4, 5, 6])
@@ -92,7 +93,8 @@ function make_minibatch(X, Y, idxs)
 end
 batch_size = 128
 mb_idxs = partition(1:length(train_imgs), batch_size)
-typeof(mb_idxs)
 train_set = [make_minibatch(train_imgs, train_labels, i) for i in mb_idxs]
 
 ################################################################################
+train_imgs
+features.images
